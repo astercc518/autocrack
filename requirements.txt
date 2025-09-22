@@ -2,6 +2,7 @@ Flask==2.3.3
 Flask-SQLAlchemy==3.0.5
 Flask-CORS==4.0.0
 Flask-SocketIO==5.3.6
+PyJWT==2.8.0
 requests==2.31.0
 redis==5.0.1
 celery==5.3.4
@@ -16,3 +17,5 @@ colorama==0.4.6
 tqdm==4.66.1
 python-socketio==5.10.0
 eventlet==0.33.3
+validators==0.22.0
+werkzeug==2.3.7

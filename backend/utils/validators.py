@@ -1,72 +1,62 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-验证器工具函数
+数据验证工具函数
 """
 
 import re
-import json
-from urllib.parse import urlparse
+from typing import List, Dict, Any
 
-def validate_url(url):
-    """验证URL格式"""
-    try:
-        result = urlparse(url)
-        return all([result.scheme, result.netloc])
-    except:
-        return False
+def validate_required_fields(data: Dict[str, Any], required_fields: List[str]) -> List[str]:
+    """验证必需字段"""
+    missing_fields = []
+    for field in required_fields:
+        if field not in data or not data[field]:
+            missing_fields.append(field)
+    return missing_fields
 
-def validate_ip(ip):
-    """验证IP地址格式"""
-    pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
-    if re.match(pattern, ip):
-        parts = ip.split('.')
-        return all(0 <= int(part) <= 255 for part in parts)
-    return False
-
-def validate_port(port):
-    """验证端口号"""
-    try:
-        port_num = int(port)
-        return 1 <= port_num <= 65535
-    except:
-        return False
-
-def validate_json(json_str):
-    """验证JSON格式"""
-    try:
-        json.loads(json_str)
-        return True
-    except:
-        return False
-
-def validate_email(email):
+def validate_email(email: str) -> bool:
     """验证邮箱格式"""
+    if not email:
+        return False
+    
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
-def validate_domain(domain):
-    """验证域名格式"""
-    pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
-    return re.match(pattern, domain) is not None
-
-def sanitize_input(text):
-    """清理输入文本"""
-    if not text:
-        return ""
-    
-    # 移除HTML标签
-    clean = re.sub(r'<[^>]+>', '', text)
-    
-    # 移除特殊字符，保留字母数字和常见符号
-    clean = re.sub(r'[^\w\s\-_.@:]', '', clean)
-    
-    return clean.strip()
-
-def validate_file_extension(filename, allowed_extensions):
-    """验证文件扩展名"""
-    if not filename:
+def validate_password(password: str) -> bool:
+    """验证密码强度"""
+    if not password or len(password) < 8:
         return False
     
-    extension = filename.lower().split('.')[-1] if '.' in filename else ''
-    return extension in [ext.lower() for ext in allowed_extensions]
+    # 至少包含一个字母和一个数字
+    has_letter = re.search(r'[a-zA-Z]', password) is not None
+    has_digit = re.search(r'\d', password) is not None
+    
+    return has_letter and has_digit
+
+def validate_phone(phone: str) -> bool:
+    """验证手机号格式"""
+    if not phone:
+        return True  # 手机号可选
+    
+    # 简单的手机号验证
+    pattern = r'^1[3-9]\d{9}$'
+    return re.match(pattern, phone) is not None
+
+def validate_username(username: str) -> bool:
+    """验证用户名格式"""
+    if not username:
+        return False
+    
+    # 用户名：3-20位，字母数字下划线
+    pattern = r'^[a-zA-Z0-9_]{3,20}$'
+    return re.match(pattern, username) is not None
+
+def validate_url(url: str) -> bool:
+    """验证URL格式"""
+    if not url:
+        return False
+    
+    # 简单的URL验证
+    pattern = r'^https?://[^\s/$.?#].[^\s]*$'
+    return re.match(pattern, url) is not None

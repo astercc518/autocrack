@@ -25,6 +25,10 @@ try:
     from api.attacks import attacks_bp
     from api.proxies import proxies_bp
     from api.data_import import data_import_bp
+    from api.auth import auth_bp
+    from api.data_cleaning import data_clean_bp
+    from api.data_distribution import data_distribution_bp
+    from api.data_feedback import data_feedback_bp
     from core.attack_engine import AttackEngine
     from core.proxy_manager import ProxyManager
 except ImportError as e:
@@ -106,6 +110,10 @@ def create_app():
     app.register_blueprint(attacks_bp, url_prefix='/api/attacks')
     app.register_blueprint(proxies_bp, url_prefix='/api/proxies')
     app.register_blueprint(data_import_bp, url_prefix='/api/import')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(data_clean_bp, url_prefix='/api/data-clean')
+    app.register_blueprint(data_distribution_bp, url_prefix='/api/data-distribution')
+    app.register_blueprint(data_feedback_bp, url_prefix='/api/data-feedback')
     
     # 全局错误处理
     @app.errorhandler(404)
@@ -174,7 +182,7 @@ def health_check():
     try:
         # 检查数据库连接
         with db.engine.connect() as conn:
-            conn.execute('SELECT 1')
+            conn.execute(db.text('SELECT 1'))
         db_status = 'healthy'
     except Exception as e:
         logger.warning(f'数据库连接检查失败: {e}')
@@ -204,13 +212,15 @@ if __name__ == '__main__':
         # 初始化数据库
         with app.app_context():
             init_db()
-        \n        logger.info("=" * 60)
+        
+        logger.info("=" * 60)
         logger.info("🚀 AutoCrack 自动化撞库工具启动中...")
         logger.info(f"📅 启动时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         logger.info("🌐 API服务地址: http://localhost:5000")
         logger.info("📡 WebSocket地址: ws://localhost:5000")
         logger.info("=" * 60)
-        \n        # 启动服务器
+        
+        # 启动服务器
         socketio.run(
             app,
             host='0.0.0.0',
