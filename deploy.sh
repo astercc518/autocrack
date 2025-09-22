@@ -18,13 +18,21 @@ check_docker() {
         exit 1
     fi
     
-    if ! command -v docker-compose &> /dev/null; then
+    if ! command -v docker-compose &> /dev/null && ! command -v docker compose &> /dev/null; then
         echo "❌ Docker Compose未安装，请先安装Docker Compose"
         echo "📋 安装指南: https://docs.docker.com/compose/install/"
         exit 1
     fi
     
+    # 检查Docker是否正在运行
+    if ! docker info >/dev/null 2>&1; then
+        echo "❌ Docker服务未启动，请先启动Docker"
+        exit 1
+    fi
+    
     echo "✅ Docker环境检查完成"
+    echo "📊 Docker版本: $(docker --version)"
+    echo "📊 Docker Compose版本: $(docker-compose --version 2>/dev/null || docker compose version)"
 }
 
 # 构建镜像

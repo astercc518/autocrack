@@ -75,14 +75,15 @@ AutoCrack是一个基于Sentinel、Snipr、Hydra项目理念开发的现代化�
 #### 开发环境部署
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/autocrack.git
+git clone https://github.com/astercc518/autocrack.git
 cd autocrack
 
 # 启动开发环境
 docker-compose up -d
 
-# 查看服务状态
-docker-compose ps
+# 验证部署
+./verify.sh  # Linux/macOS
+verify.bat   # Windows
 ```
 
 #### 生产环境部署
@@ -101,20 +102,20 @@ docker-compose -f docker-compose.prod.yml logs -f
 # 运行部署脚本
 deploy.bat
 
-# 启动服务
-start.bat
+# 验证部署
+verify.bat
 ```
 
 #### Linux/macOS
 ```bash
 # 赋予执行权限
-chmod +x deploy.sh start.sh
+chmod +x deploy.sh verify.sh
 
 # 运行部署脚本
 ./deploy.sh
 
-# 启动服务
-./start.sh
+# 验证部署
+./verify.sh
 ```
 
 ### 方式三：手动安装

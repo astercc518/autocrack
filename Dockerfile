@@ -19,17 +19,18 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制项目文件
+# 复制并安装Python依赖
 COPY requirements.txt .
-COPY backend/ ./backend/
-COPY data/ ./data/
-COPY *.py ./
-
-# 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 复制后端代码
+COPY backend/ ./backend/
+
 # 创建必要的目录
-RUN mkdir -p /app/logs /app/uploads
+RUN mkdir -p /app/data /app/logs /app/uploads
+
+# 复制数据目录（如果存在）
+COPY data/ ./data/
 
 # 设置权限
 RUN chmod +x backend/app.py
