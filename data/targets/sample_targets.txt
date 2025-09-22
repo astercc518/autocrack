@@ -1,0 +1,5 @@
+# 目标站点示例文件
+# 格式：名称	URL	登录URL
+示例网站A	https://example1.com	https://example1.com/login
+示例网站B	https://example2.com	https://example2.com/signin
+示例网站C	https://example3.com	https://example3.com/auth

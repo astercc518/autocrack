@@ -1,0 +1,11 @@
+# 组合字典示例 - 用户名:密码格式
+admin:admin
+admin:123456
+admin:password
+root:root
+root:123456
+test:test
+guest:guest
+user:user
+administrator:administrator
+demo:demo

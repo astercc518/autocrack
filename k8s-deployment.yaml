@@ -1,0 +1,265 @@
+# Kubernetes 部署配置
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: autocrack
+
+---
+# ConfigMap for application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: autocrack-config
+  namespace: autocrack
+data:
+  FLASK_ENV: "production"
+  DATABASE_URL: "postgresql://autocrack:secure_password@postgres:5432/autocrack"
+  REDIS_URL: "redis://redis:6379/0"
+  MAX_THREADS: "50"
+  RATE_LIMIT_ENABLED: "true"
+
+---
+# Secret for sensitive data
+apiVersion: v1
+kind: Secret
+metadata:
+  name: autocrack-secrets
+  namespace: autocrack
+type: Opaque
+data:
+  SECRET_KEY: eW91ci1zdXBlci1zZWNyZXQta2V5LWhlcmU= # base64 encoded
+  POSTGRES_PASSWORD: c2VjdXJlX3Bhc3N3b3Jk # base64 encoded
+  REDIS_PASSWORD: cmVkaXNfc2VjdXJlX3Bhc3N3b3Jk # base64 encoded
+
+---
+# PostgreSQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: autocrack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_DB
+          value: autocrack
+        - name: POSTGRES_USER
+          value: autocrack
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: autocrack-secrets
+              key: POSTGRES_PASSWORD
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+
+---
+# PostgreSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: autocrack
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+
+---
+# Redis Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: autocrack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: autocrack-secrets
+              key: REDIS_PASSWORD
+        ports:
+        - containerPort: 6379
+        command:
+        - redis-server
+        - --requirepass
+        - $(REDIS_PASSWORD)
+        - --appendonly
+        - "yes"
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+      volumes:
+      - name: redis-storage
+        persistentVolumeClaim:
+          claimName: redis-pvc
+
+---
+# Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: autocrack
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+
+---
+# AutoCrack Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: autocrack-backend
+  namespace: autocrack
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: autocrack-backend
+  template:
+    metadata:
+      labels:
+        app: autocrack-backend
+    spec:
+      containers:
+      - name: autocrack-backend
+        image: autocrack:latest
+        envFrom:
+        - configMapRef:
+            name: autocrack-config
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: autocrack-secrets
+              key: SECRET_KEY
+        ports:
+        - containerPort: 5000
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+
+---
+# AutoCrack Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: autocrack-backend
+  namespace: autocrack
+spec:
+  selector:
+    app: autocrack-backend
+  ports:
+  - port: 5000
+    targetPort: 5000
+
+---
+# Nginx Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: autocrack-ingress
+  namespace: autocrack
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+spec:
+  rules:
+  - host: autocrack.local
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: autocrack-backend
+            port:
+              number: 5000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: autocrack-frontend
+            port:
+              number: 80
+
+---
+# Persistent Volume Claims
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: autocrack
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: autocrack
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
